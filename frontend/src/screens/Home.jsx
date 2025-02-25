@@ -1,13 +1,16 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useState, useEffect } from 'react'
 import { UserContext } from '../context/UserProvider.jsx'
-import { useSearchParams } from 'react-router-dom'
 import axios from '../config/axios'
+import { useNavigate } from 'react-router-dom'
 
 const Home = () => {
 
   const { user } = useContext(UserContext)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [projectName, setProjectName] = useState('')
+  const [project, setProject] = useState([])
+
+  const navigate = useNavigate()
 
   function createProject(e) {
     e.preventDefault()
@@ -26,15 +29,49 @@ const Home = () => {
       })
   }
 
+  useEffect(() => {
+
+    axios.get('/projects/all')
+      .then((res) => {
+
+        setProject(res.data.projects)
+
+      })
+      .catch(err => {
+        console.log(err)
+      })
+  },[])
+
   return (
     <main className='text-white bg-gray-900 h-screen flex items-center justify-center box-border flex-col'>
       <h1 className='mb-2.5 text-2xl font-semibold'>Create a new Project</h1>
       <div className=''>
         <button
           onClick={() => setIsModalOpen(true)}
-          className='bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-7 rounded-lg shadow-md transition-all duration-300'><span className='mr-2'>New Project</span>
+          className='bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-7 rounded-lg shadow-md transition-all duration-300 cursor-pointer'><span className='mr-2'>New Project</span>
           <i className="ri-add-large-fill"></i>
         </button>
+      </div>
+      <h1 className='mb-2 mt-2.5 text-2xl font-semibold'>Your Projects</h1>
+      <div className='flex w-auto gap-1'>
+        {
+          project.map((project) => (
+            <div key={project._id}
+              onClick={() => {
+                navigate(`/project`, {
+                  state: { project }
+                })
+              }}
+              className=' project bg-white text-blue-600 hover:bg-blue-200 font-semibold py-3 px-7 rounded-lg shadow-md transition-all duration-300 cursor-pointer flex gap-2 flex-col'>
+              <h1 className='font-bold flex justify-center'>{project.name}</h1>
+
+              <div className='flex gap-1 items-center'>
+                <h1><i className="ri-user-line"></i>Collaborators :</h1>
+                {project.users.length}
+              </div>
+            </div>
+          ))
+        }
       </div>
 
       {isModalOpen && (

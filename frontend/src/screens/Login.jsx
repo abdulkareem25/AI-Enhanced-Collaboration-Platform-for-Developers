@@ -22,7 +22,7 @@ const Login = () => {
       localStorage.setItem('token', res.data.token)
       setUser(res.data.user)
 
-      navigate('/')
+      navigate('/home')
     }).catch((err) => {
       console.log(err.response.data)
     })
@@ -63,7 +63,7 @@ const Login = () => {
           </button>
         </form>
         <p className="text-gray-400 text-center mt-4">
-          Don't have an account? <Link to="/register" className="text-blue-400 hover:underline">Register</Link>
+          Don't have an account? <Link to="/" className="text-blue-400 hover:underline">Register</Link>
         </p>
       </div>
     </div>
