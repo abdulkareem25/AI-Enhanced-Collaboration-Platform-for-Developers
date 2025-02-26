@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+
+.conversation-area::-webkit-scrollbar{
+    display: none;
+}
+
+.addCollaborators::-webkit-scrollbar{
+    display: none;
+}

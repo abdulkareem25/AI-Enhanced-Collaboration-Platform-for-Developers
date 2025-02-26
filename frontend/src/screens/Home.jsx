@@ -40,7 +40,7 @@ const Home = () => {
       .catch(err => {
         console.log(err)
       })
-  },[])
+  }, [])
 
   return (
     <main className='text-white bg-gray-900 h-screen flex items-center justify-center box-border flex-col'>
@@ -53,7 +53,7 @@ const Home = () => {
         </button>
       </div>
       <h1 className='mb-2 mt-2.5 text-2xl font-semibold'>Your Projects</h1>
-      <div className='flex w-auto gap-1'>
+      <div className='flex w-[80%] gap-1 justify-center'>
         {
           project.map((project) => (
             <div key={project._id}
@@ -62,11 +62,14 @@ const Home = () => {
                   state: { project }
                 })
               }}
-              className=' project bg-white text-blue-600 hover:bg-blue-200 font-semibold py-3 px-7 rounded-lg shadow-md transition-all duration-300 cursor-pointer flex gap-2 flex-col'>
-              <h1 className='font-bold flex justify-center'>{project.name}</h1>
+              className=' project bg-white text-blue-600 hover:bg-blue-200 font-semibold py-3 px-5 rounded-lg shadow-md transition-all duration-300 cursor-pointer flex gap-2 flex-col justify-center'>
+              <h1 className='font-bold flex text-center justify-center '>{project.name}</h1>
 
-              <div className='flex gap-1 items-center'>
-                <h1><i className="ri-user-line"></i>Collaborators :</h1>
+              <div className='flex gap-1 justify-center items-center'>
+                <h1 >
+                  <i className={project.users.length <= 1 ? "ri-user-fill" : "ri-group-fill"}></i>
+                  {project.users.length <=1 ? `Collaborator :` : `Collaborators :`}
+                </h1>
                 {project.users.length}
               </div>
             </div>
