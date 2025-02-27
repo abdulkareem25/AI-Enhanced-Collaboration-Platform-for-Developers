@@ -133,7 +133,7 @@ const Project = () => {
                   </div>
 
                   <div className="userName text-white font-semibold text-xl">
-                    {user.email}
+                    {user.name}
                   </div>
 
                 </div>
@@ -162,7 +162,7 @@ const Project = () => {
                   </div>
 
                   <div className="userName text-white font-semibold text-xl">
-                    {user.email}
+                    {user.name}
                   </div>
                 </div>
               ))}

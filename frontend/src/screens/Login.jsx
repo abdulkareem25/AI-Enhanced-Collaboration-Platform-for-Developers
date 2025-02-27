@@ -33,7 +33,7 @@ const Login = () => {
       <div className="bg-gray-800 p-8 rounded-lg shadow-lg w-96">
         <h2 className="text-white text-2xl font-semibold mb-6 text-center">Login</h2>
         <form onSubmit={submitHandler}>
-          <div className="mb-4">
+          <div className="mb-2">
             <label className="block text-gray-300 ">Email</label>
             <input
               type="email"
@@ -44,7 +44,7 @@ const Login = () => {
               required
             />
           </div>
-          <div className="mb-4">
+          <div className="mb-2">
             <label className="block text-gray-300 ">Password</label>
             <input
               type="password"
@@ -57,7 +57,7 @@ const Login = () => {
           </div>
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-7"
           >
             Login
           </button>

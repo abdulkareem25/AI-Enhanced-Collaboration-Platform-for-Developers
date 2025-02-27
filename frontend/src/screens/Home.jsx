@@ -10,6 +10,8 @@ const Home = () => {
   const [projectName, setProjectName] = useState('')
   const [project, setProject] = useState([])
 
+  const [loggedInUser, setLoggedInUser] = useState([])
+
   const navigate = useNavigate()
 
   function createProject(e) {
@@ -35,15 +37,29 @@ const Home = () => {
       .then((res) => {
 
         setProject(res.data.projects)
+        
 
       })
       .catch(err => {
         console.log(err)
       })
-  }, [])
+
+      axios.get('/users/all').then(res => {
+
+        setLoggedInUser(res.data.loggedInUser.name)
+  
+      }).catch(err => {
+  
+        console.log(err)
+  
+      })
+    },
+  [])
 
   return (
-    <main className='text-white bg-gray-900 h-screen flex items-center justify-center box-border flex-col'>
+    <main className='text-white bg-gray-900 h-screen'>
+      <header className='p-10 text-5xl font-semibold'>Hello, <span className='text-blue-500'>{loggedInUser}</span> </header>
+      <section className='flex items-center justify-center box-border flex-col h-[70%]'>
       <h1 className='mb-2.5 text-2xl font-semibold'>Create a new Project</h1>
       <div className=''>
         <button
@@ -114,6 +130,7 @@ const Home = () => {
           </div>
         </div>
       )}
+      </section>
     </main>
   )
 }
