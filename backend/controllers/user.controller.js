@@ -54,11 +54,11 @@ export const loginController = async (req, res) => {
 
         const token = await user.generateJWT();
 
-        const { name } = user;
+        // const { name } = user;
 
         delete user._doc.password;
 
-        res.status(200).json({ user: { name, email: user.email }, token });
+        res.status(200).json({ user: { ...user._doc } , token });
 
     } catch (err) {
         res.status(400).send(err.message);

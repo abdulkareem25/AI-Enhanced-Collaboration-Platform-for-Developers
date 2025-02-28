@@ -8,3 +8,7 @@
 .addCollaborators::-webkit-scrollbar{
     display: none;
 }
+
+.message-box::-webkit-scrollbar{
+    display: none;
+}
