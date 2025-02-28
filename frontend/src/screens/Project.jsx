@@ -45,6 +45,14 @@ const Project = () => {
 
   }
 
+  function getColorForSender(sender) {
+    let hash = 0;
+    for (let i = 0; i < sender.length; i++) {
+      hash = sender.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 100%, 80%)`; // Ensures good contrast in dark mode
+  }
 
 
   function send() { 
@@ -96,9 +104,11 @@ const Project = () => {
   
     const message = document.createElement('div');
     message.classList.add('message', 'flex', 'flex-col', 'rounded-lg', 'p-2', 'max-w-60', 'bg-gray-700', 'text-white', 'self-start');
-    message.innerHTML = `<small class='text-xs text-blue-500'>${messageObject.sender}</small>
-                  <p class='text-sm'>${messageObject.message}</p>`;
+    message.innerHTML = 
+    `<small class='text-xs' style="color: ${getColorForSender(messageObject.sender)}">${messageObject.sender}</small> 
+    <p class='text-sm'>${messageObject.message}</p>`
   
+                 
     messageBoxRef.current.appendChild(message);
     scrollToBottom();
   }
