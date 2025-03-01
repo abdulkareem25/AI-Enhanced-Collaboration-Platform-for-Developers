@@ -16,3 +16,7 @@
 .message-box{
     scroll-behavior: smooth;
 }
+
+.ai-reply::-webkit-scrollbar{
+    display: none;
+}
