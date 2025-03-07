@@ -17,9 +17,20 @@ const model = genAI.getGenerativeModel({
     
         "text":"This is your fileTree structure of the express server",
         "fileTree":{
-            "app.js":{
-                file: {
-                    content:"
+            "frontend":{
+                "index.html":{
+                    file:{
+                        contents:"<h1>Hello World</h1>"
+                    }
+                },
+                "style.css":{
+                    file:{
+                        contents:"body{background-color: red}"
+                    }
+                },
+                "app.js":{
+                    file: {
+                        contents:"
                         const express = require('express');
 
                         const app = express();
@@ -31,13 +42,13 @@ const model = genAI.getGenerativeModel({
                         app.listen(3000,() => {
                         console.log('Server is running on port 3000');
                         })
-                    "
+                        "
+                    },
                 },
             },
-
             "package.json":{
                 file: {
-                    content:"
+                    contents:"
                         {
                         "name":"temp-server",
                         "version": "1.0.0",
