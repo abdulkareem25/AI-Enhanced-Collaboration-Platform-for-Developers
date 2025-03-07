@@ -69,7 +69,7 @@ const Home = () => {
         </button>
       </div>
       <h1 className='mb-2 mt-2.5 text-2xl font-semibold'>Your Projects</h1>
-      <div className='flex w-[80%] gap-1 justify-center'>
+      <div className='flex gap-1 flex-wrap justify-center w-[85%]'>
         {
           project.map((project) => (
             <div key={project._id}
@@ -78,7 +78,7 @@ const Home = () => {
                   state: { project }
                 })
               }}
-              className=' project bg-white text-blue-600 hover:bg-blue-200 font-semibold py-3 px-5 rounded-lg shadow-md transition-all duration-300 cursor-pointer flex gap-2 flex-col justify-center'>
+              className=' project bg-white text-blue-600 hover:bg-blue-200 font-semibold py-3 px-5 rounded-lg shadow-md transition-all duration-300 cursor-pointer flex gap-2 flex-col justify-center h-42 max-w-[250px]'>
               <h1 className='font-bold flex text-center justify-center '>{project.name}</h1>
 
               <div className='flex gap-1 justify-center items-center'>
