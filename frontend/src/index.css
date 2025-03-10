@@ -20,3 +20,12 @@
 .ai-reply::-webkit-scrollbar{
     display: none;
 }
+
+.tab::-webkit-scrollbar{
+    display: none;
+}
+
+
+html::-webkit-scrollbar {
+    display: none;
+}

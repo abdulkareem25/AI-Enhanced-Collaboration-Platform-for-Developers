@@ -7,17 +7,25 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "nodemon server.js"
   },
   "dependencies": {
+    "@codemirror/lang-javascript": "^6.2.3",
+    "@devbookhq/splitter": "^1.4.2",
     "@tailwindcss/vite": "^4.0.6",
+    "@uiw/codemirror-theme-dracula": "^4.23.10",
+    "@uiw/react-codemirror": "^4.23.10",
+    "@webcontainer/api": "^1.5.1-internal.9",
     "axios": "^1.7.9",
+    "codemirror": "^6.0.1",
     "markdown-to-jsx": "^7.7.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.5",
     "remixicon": "^4.6.0",
     "socket.io-client": "^4.8.1",
+    "split.js": "^1.6.5",
     "tailwindcss": "^4.0.6"
   },
   "devDependencies": {
