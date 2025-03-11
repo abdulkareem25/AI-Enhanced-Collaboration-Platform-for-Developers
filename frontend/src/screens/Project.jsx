@@ -105,16 +105,29 @@ const Project = () => {
   }
 
   function addCollaborators() {
+    if (!user || user._id !== location.state.project.admin?._id) {
+      alert("Only the admin can add collaborators.");
+      return;
+    }
+
+    if (selectedUserIds.size === 0) {
+      alert("Select users");
+      return;
+    }
+
     axios.put("/projects/add-user", {
       projectId: location.state.project._id,
       users: Array.from(selectedUserIds)
-    }).then(res => {
-      console.log(res.data)
-      setIsModalOpen(false)
-    }).catch(err => {
-      console.log(err)
     })
+      .then(res => {
+        console.log(res.data);
+        setIsModalOpen(false);
+      })
+      .catch(err => {
+        console.log(err);
+      });
   }
+
 
 
   function getColorForSender(sender) {
@@ -174,17 +187,21 @@ const Project = () => {
 
       try {
         // Directly use data.message if it's already an object
-        const message = typeof data.message === "string" ? JSON.parse(data.message) : data.message;
-        console.log("Parsed Message:", message);
+        if (data.sender._id === 'ai') {
+          const message = typeof data.message === "string" ? JSON.parse(data.message) : data.message;
+          console.log("Parsed Message:", message);
 
-        webContainer?.mount(message.fileTree)
+          webContainer?.mount(message.fileTree)
 
-        if (message.fileTree) {
-          console.log("File Tree:", message.fileTree);
-          setFileTree(message.fileTree);
+          if (message.fileTree) {
+            console.log("File Tree:", message.fileTree);
+            setFileTree(message.fileTree);
+          }
+
+          setMessages(prevMessages => [...prevMessages, data]);
+        } else {
+          setMessages(prevMessages => [...prevMessages, data]);
         }
-
-        setMessages(prevMessages => [...prevMessages, data]);
       } catch (error) {
         console.error("Error parsing message:", error);
       }
@@ -195,6 +212,14 @@ const Project = () => {
         console.log(res.data.project)
         setProject(res.data.project)
       })
+
+    axios.get(`/projects/get-admin/${location.state.project.admin}`)
+      .then(res => {
+        console.log(res.data.admin)
+        setAdmin(res.data.admin)
+      })
+
+
 
     axios.get('/users/all')
       .then(res => {
@@ -212,35 +237,42 @@ const Project = () => {
     }
   }, [messages])
 
+  // collaborators normal karne ke liye
+  useEffect(() => {
+    if (!isModalOpen) {
+      setSelectedUserIds(new Set()); // Modal band hone pe selectedUserIds empty ho jayega
+    }
+  }, [isModalOpen]);
 
 
-//auto reloading server
-useEffect(() => {
-  if (!webContainer) return;
 
-  async function restartServer() {
-    if (runProcess) {
-      await runProcess.kill(); // Stop current process
+  //auto reloading server
+  useEffect(() => {
+    if (!webContainer) return;
+
+    async function restartServer() {
+      if (runProcess) {
+        await runProcess.kill(); // Stop current process
+      }
+
+      await webContainer.mount(fileTree); // Update files
+      const process = await webContainer.spawn("npm", ["start"]);
+      setRunProcess(process);
+
+      process.output.pipeTo(new WritableStream({
+        write(chunk) {
+          console.log(chunk);
+        }
+      }));
+
+      webContainer.on("server-ready", (port, url) => {
+        console.log("Server running on:", url);
+        setIframeUrl(url);
+      });
     }
 
-    await webContainer.mount(fileTree); // Update files
-    const process = await webContainer.spawn("npm", ["start"]);
-    setRunProcess(process);
-
-    process.output.pipeTo(new WritableStream({
-      write(chunk) {
-        console.log(chunk);
-      }
-    }));
-
-    webContainer.on("server-ready", (port, url) => {
-      console.log("Server running on:", url);
-      setIframeUrl(url);
-    });
-  }
-
-  restartServer();
-}, [fileTree]); // Runs whenever fileTree updates
+    restartServer();
+  }, [fileTree]); // Runs whenever fileTree updates
 
 
 
@@ -248,24 +280,26 @@ useEffect(() => {
     <main className='h-screen w-screen flex bg-gray-950 text-white '>
       <section className='left relative h-full flex flex-col max-w-70 bg-gray-800'>
         <div className="chats h-full flex flex-col">
-          <header className='rounded-b flex justify-between w-full bg-gray-950 p-3 px-4 h-12'>
-            <h2 className="relative text-white text-lg font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[300px] cursor-pointer group">
-              {project.name}
+          <header className='relative rounded-b flex items-center justify-between w-full bg-gray-950 p-3 px-4 h-12'>
+            <div className="relative group w-full">
+              <h2 className="text-white text-lg font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[300px] cursor-pointer">
+                {project.name}
+              </h2>
 
-              {/* Tooltip - Fixed position taake screen ke andar rahe */}
-              <span className="fixed left-1/4 top-14 transform -translate-x-1/2 hidden group-hover:flex 
-                     bg-black text-white text-sm px-3 py-1 rounded-md shadow-lg max-w-[90vw] w-max 
-                     whitespace-normal break-words z-50">
+              {/* Tooltip - Ab ye poora header jitna wide hoga */}
+              <span className="absolute left-0 top-full mt-1 opacity-0 group-hover:opacity-100 
+           bg-black text-white text-sm px-3 py-1 rounded-md shadow-lg w-full 
+           text-center whitespace-normal break-words z-50 transition-opacity duration-200">
                 {project.name}
               </span>
-            </h2>
+            </div>
+
             <button
               onClick={() => setIsSidePanelOpen(!isSidePanelOpen)}
               className='cursor-pointer text-blue-500 text-xl'>
               <i className="ri-group-fill"></i>
             </button>
           </header>
-
           <div className='conversation-area flex flex-grow flex-col max-w-70 p-2 overflow-y-auto'>
             <div
               ref={messageBoxRef}
@@ -341,11 +375,15 @@ useEffect(() => {
                   <i className="ri-user-fill"></i>
                 </div>
                 <div className="userName text-white font-semibold text-xl">
-                  {user.name}
+                  {user.name} {user._id === project.admin?._id && <span className="text-yellow-600 text-sm">(admin)</span>}
+                  <div className="email text-gray-400 text-xs pb-1">
+                    {user.email}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
+
         </div>
       </section>
 
@@ -400,7 +438,7 @@ useEffect(() => {
                   onClick={async () => {
                     await webContainer?.mount(fileTree)
 
-                    
+
                     const installProcess = await webContainer.spawn("npm", ["install"]);
 
                     installProcess.output.pipeTo(new WritableStream({
@@ -428,7 +466,7 @@ useEffect(() => {
 
                 <button
                   onClick={async () => {
-                    
+
                     if (runProcess) {
                       await runProcess.kill();
                     } else {
@@ -497,14 +535,6 @@ useEffect(() => {
                     }}
                   />
                 </div>
-
-
-
-
-
-
-
-
               ) : (
                 <div className="h-full w-full">
                   <CodeMirror
@@ -529,8 +559,6 @@ useEffect(() => {
           </div>
           {/* )} */}
         </div>
-
-
       </section>
 
       {isModalOpen && (
@@ -538,20 +566,26 @@ useEffect(() => {
           <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-[90%] max-w-md ">
             <h2 className="text-white text-xl font-semibold mb-4 text-center">Select a Collaborator</h2>
             <div className="addCollaborators max-h-50 overflow-y-auto flex flex-col gap-1">
-              {users.map(user => (
-                <div
-                  key={user.id}
-                  className={`user flex gap-2 items-center rounded-lg mx-1 cursor-pointer ${Array.from(selectedUserIds).indexOf(user._id) !== -1 ? 'bg-gray-700' : 'bg-gray-900'} hover:bg-gray-700`}
-                  onClick={() => handleUserClick(user._id)}
-                >
-                  <div className='profile rounded-full p-2 py-1 m-1 text-xl text-blue-500'>
-                    <i className="ri-user-fill"></i>
+              {users
+                .filter(user => !project.users.some(projectUser => projectUser._id === user._id))
+                .map(user => (
+                  <div
+                    key={user.id}
+                    className={`user flex gap-2 items-center rounded-lg mx-1 cursor-pointer 
+                      ${Array.from(selectedUserIds).includes(user._id) ? 'bg-gray-700 hover:bg-gray-700/70' : 'bg-gray-900 hover:bg-gray-650'}`}
+                    onClick={() => handleUserClick(user._id)}
+                  >
+                    <div className='profile rounded-full p-2 py-1 m-1 text-xl text-blue-500'>
+                      <i className="ri-user-fill"></i>
+                    </div>
+                    <div className="userName text-white font-semibold text-xl">
+                      {user.name}
+                      <div className="email text-gray-400 text-xs pb-1">
+                        {user.email}
+                      </div>
+                    </div>
                   </div>
-                  <div className="userName text-white font-semibold text-xl">
-                    {user.name}
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
             <div className="flex justify-between gap-4 mt-4 mx-2">
               <button
