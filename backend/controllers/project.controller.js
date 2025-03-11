@@ -5,26 +5,38 @@ import { validationResult } from 'express-validator'
 
 
 export const createProject = async (req, res) => {
-
-    const errors = validationResult(req)
+    const errors = validationResult(req);
 
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() })
+        return res.status(400).json({ errors: errors.array() });
     }
 
     try {
-        const { name } = req.body
-        const loggedInUser = await userModel.findOne({ email: req.user.email })
-        const userId = loggedInUser._id
+        const { name } = req.body;
+        const loggedInUser = await userModel.findOne({ email: req.user.email });
 
-        const newProject = await projectServices.createProject({ name, userId })
+        if (!loggedInUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
 
-        res.status(201).json(newProject)
+        const userId = loggedInUser._id;
+
+        // Admin object create karna
+        const admin = {
+            _id: userId,
+            name: loggedInUser.name,
+            email: loggedInUser.email
+        };
+
+        // Project creation ke liye admin ka data pass karna
+        const newProject = await projectServices.createProject({ name, admin });
+
+        res.status(201).json(newProject);
     } catch (err) {
-        console.log(err)
-        res.status(400).send(err.message)
+        console.log(err);
+        res.status(400).send(err.message);
     }
-}
+};
 
 
 export const getAllProject = async (req, res) => {

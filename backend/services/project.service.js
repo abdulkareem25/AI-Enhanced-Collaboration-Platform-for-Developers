@@ -1,29 +1,31 @@
 import projectModel from '../models/project.model.js'
 import mongoose from 'mongoose'
 
-export const createProject = async ({ name, userId }) => {
+export const createProject = async ({ name, admin }) => {
     if (!name) {
-        throw new Error('Name is required')
+        throw new Error('Name is required');
     }
-    if (!userId) {
-        throw new Error('UserId is required')
+    if (!admin || !admin._id) {
+        throw new Error('Admin details are required');
     }
 
-    let project
+    let project;
     try {
         project = await projectModel.create({
             name,
-            users: [userId]
-        })
+            admin, // Store admin details in the project
+            users: [admin._id] // Admin should be part of users
+        });
     } catch (error) {
         if (error.code == 11000) {
-            throw new Error('Project name is already exists')
+            throw new Error('Project name already exists');
         }
-        throw error
+        throw error;
     }
 
-    return project
-}
+    return project;
+};
+
 
 
 export const getAllProjectByUserId = async ({ userId }) => {
