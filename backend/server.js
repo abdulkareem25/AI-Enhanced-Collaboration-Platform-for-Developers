@@ -15,9 +15,17 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: '*'
+        origin: '*',
+        methods: ["GET", "POST"]
+    },
+    allowRequest: (req, callback) => {
+        req.res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+        req.res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+        req.res.setHeader("Cross-Origin-Resource-Policy", "cross-origin"); // Optional
+        callback(null, true);
     }
 });
+
 
 
 io.use(async (socket, next) => {
