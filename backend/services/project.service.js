@@ -27,7 +27,6 @@ export const createProject = async ({ name, admin }) => {
 };
 
 
-
 export const getAllProjectByUserId = async ({ userId }) => {
     if (!userId) {
         throw new Error('UserId is required')
@@ -108,4 +107,29 @@ export const getProjectById = async ({ projectId })  => {
     }).populate('users')
 
     return project
+}
+
+
+export const updateFileTree = async ({ projectId, fileTree }) => {
+    if (!projectId) {
+        throw new Error("projectId is required")
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+        throw new Error("Invalid projectId")
+    }
+
+    if (!fileTree) {
+        throw new Error("fileTree is required")
+    }
+
+    const updatedProject = await projectModel.findOneAndUpdate({
+        _id: projectId
+    }, {
+        fileTree
+    }, {
+        new: true
+    })
+
+    return updatedProject
 }

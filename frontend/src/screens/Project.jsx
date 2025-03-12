@@ -1,6 +1,7 @@
 import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 import { dracula } from "@uiw/codemirror-theme-dracula"; // Correct import
+import { debounce } from "lodash";
 
 
 import React, { useState, useEffect, useContext } from 'react'
@@ -30,12 +31,14 @@ const Project = () => {
 
   const [webContainer, setWebContainer] = useState(null)
   const [reloadKey, setReloadKey] = useState(0);
+  const [isInstalling, setIsInstalling] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
   const [iframeUrl, setIframeUrl] = useState(null)
   const [runProcess, setRunProcess] = useState(null);
 
   const messageBoxRef = React.useRef(null)
 
-  const renderFileTree = (tree, path = "") => {
+  const renderFileTree = (tree = {}, path = "") => {
     return Object.keys(tree).map((file) => {
       const currentPath = path ? `${path}/${file}` : file;
       if (typeof tree[file] === "object" && !tree[file].file) {
@@ -90,6 +93,17 @@ const Project = () => {
 
     return current?.file?.contents || "";
   };
+
+  const autoSave = debounce((updatedFileTree) => {
+    axios.put("/projects/update-file-tree", {
+      projectId: location.state.project._id,
+      fileTree: updatedFileTree,
+    }).then(res => {
+      console.log("Auto-saved:", res.data);
+    }).catch(err => {
+      console.log("Error in auto-save:", err);
+    });
+  }, 1000);
 
 
   const handleUserClick = (id) => {
@@ -197,8 +211,8 @@ const Project = () => {
             console.log("File Tree:", message.fileTree);
             setFileTree(message.fileTree);
           }
-
           setMessages(prevMessages => [...prevMessages, data]);
+
         } else {
           setMessages(prevMessages => [...prevMessages, data]);
         }
@@ -211,16 +225,10 @@ const Project = () => {
       .then(res => {
         console.log(res.data.project)
         setProject(res.data.project)
+        setFileTree(res.data.project.fileTree)
       })
 
-    axios.get(`/projects/get-admin/${location.state.project.admin}`)
-      .then(res => {
-        console.log(res.data.admin)
-        setAdmin(res.data.admin)
-      })
-
-
-
+    
     axios.get('/users/all')
       .then(res => {
         setUsers(res.data.users)
@@ -246,33 +254,22 @@ const Project = () => {
 
 
 
-  //auto reloading server
   useEffect(() => {
-    if (!webContainer) return;
-
-    async function restartServer() {
-      if (runProcess) {
-        await runProcess.kill(); // Stop current process
+    if (!webContainer || !isInstalled) return; 
+  
+    async function updateFiles() {
+      try {
+        await webContainer.mount(fileTree); // Sirf updated files mount karo
+        console.log("Files updated in container without restart");
+      } catch (error) {
+        console.error("Error updating files:", error);
       }
-
-      await webContainer.mount(fileTree); // Update files
-      const process = await webContainer.spawn("npm", ["start"]);
-      setRunProcess(process);
-
-      process.output.pipeTo(new WritableStream({
-        write(chunk) {
-          console.log(chunk);
-        }
-      }));
-
-      webContainer.on("server-ready", (port, url) => {
-        console.log("Server running on:", url);
-        setIframeUrl(url);
-      });
     }
+  
+    updateFiles();
+  }, [fileTree]); // Server restart nahi hoga, sirf file update hogi
+  
 
-    restartServer();
-  }, [fileTree]); // Runs whenever fileTree updates
 
 
 
@@ -317,11 +314,11 @@ const Project = () => {
                         {msg.sender.name}
                       </small>
                     )}
-                    <p className='text-sm'>
+                    <div className='text-sm'>
                       {msg.sender._id === 'ai' ?
                         writeAiMessage(msg.message)
                         : <div className='max-w-60 overflow-clip'>{msg.message}</div>}
-                    </p>
+                    </div>
                   </div>
                 )
               })}
@@ -366,7 +363,7 @@ const Project = () => {
           </header>
 
           <div className="users flex flex-col gap-2 ">
-            {project.users && project.users.map(user => (
+          {project.users?.filter(user => user?._id).map(user => (
               <div
                 key={user._id}
                 className='user flex gap-2 items-center bg-gray-900 rounded-lg mx-1 hover:bg-gray-700 cursor-pointer'
@@ -436,64 +433,55 @@ const Project = () => {
               <div className="actions flex gap-2 py-1 ">
                 <button
                   onClick={async () => {
-                    await webContainer?.mount(fileTree)
+                    if (isInstalling) return; // Prevent multiple installs
+                    setIsInstalling(true);
 
-
+                    await webContainer?.mount(fileTree);
                     const installProcess = await webContainer.spawn("npm", ["install"]);
 
                     installProcess.output.pipeTo(new WritableStream({
                       write(chunk) {
                         console.log(chunk);
                       }
-                    }))
+                    }));
 
-
-                    // const isProcess = await webContainer?.spawn('ls')
-
-                    // isProcess.output.pipeTo(new WritableStream({
-                    //   write(chunk) {
-                    //     console.log(chunk);
-                    //   }
-                    // }))
-
+                    await installProcess.exit;
+                    setIsInstalling(false);
+                    setIsInstalled(true);
                   }}
 
                   className="text-xl text-blue-500 px-4 cursor-pointer bg-gray-950 rounded-lg hover:bg-gray-700"
                 >
-                  Install
+                  {isInstalling ? "Installing..." : "Install"}
                 </button>
 
 
                 <button
                   onClick={async () => {
-
                     if (runProcess) {
-                      await runProcess.kill();
-                    } else {
-                      console.log("Process is not running.");
+                        await runProcess.kill();
                     }
-
-
+                
                     await webContainer.mount(fileTree); // Mount before running
-
+                
                     const process = await webContainer.spawn("npm", ["start"]);
-
                     setRunProcess(process);
-
-                    // console.log("Process started:", process);
-
-
+                
                     process.output.pipeTo(new WritableStream({
-                      write(chunk) {
-                        console.log(chunk);
-                      }
+                        write(chunk) {
+                            console.log(chunk);
+                        }
                     }));
-
+                
                     webContainer.on("server-ready", (port, url) => {
-                      console.log("Server running on:", url);
-                      setIframeUrl(url);
+                        console.log("Server running on:", url);
+                        setIframeUrl(url);
+                        
+                        // 🔹 Server run hone ke baad hi save karna
+                        autoSave(fileTree);
                     });
-                  }}
+                }}
+                                  
                   className="text-xl text-blue-500 px-4 cursor-pointer bg-gray-950 rounded-lg hover:bg-gray-700"
                 >
                   Run
@@ -517,22 +505,26 @@ const Project = () => {
                     height="100%"
                     onChange={(value) => {
                       setFileTree((prevFileTree) => {
-                        const newTree = structuredClone(prevFileTree);
-                        const parts = currentFile.split("/");
-                        let current = newTree;
-
-                        for (let i = 0; i < parts.length - 1; i++) {
-                          if (!current[parts[i]]) return prevFileTree;
-                          current = current[parts[i]];
-                        }
-
-                        if (current[parts[parts.length - 1]]?.file) {
-                          current[parts[parts.length - 1]].file.contents = value;
-                        }
-
-                        return newTree;
+                          const newTree = structuredClone(prevFileTree);
+                          const parts = currentFile.split("/");
+                          let current = newTree;
+                  
+                          for (let i = 0; i < parts.length - 1; i++) {
+                              if (!current[parts[i]]) return prevFileTree;
+                              current = current[parts[i]];
+                          }
+                  
+                          if (current[parts[parts.length - 1]]?.file) {
+                              current[parts[parts.length - 1]].file.contents = value;
+                          }
+                  
+                          return newTree;
                       });
-                    }}
+                  
+                      // 🔥 Hot Reload Bina Server Restart Kiye
+                      webContainer.mount(fileTree);
+                  }}
+                                     
                   />
                 </div>
               ) : (
@@ -554,7 +546,16 @@ const Project = () => {
             </div>
             {/* <button onClick={() => setReloadKey(prev => prev + 1)}>Reload</button> */}
             {iframeUrl && webContainer && (
-              <iframe key={reloadKey} src={iframeUrl} className="w-full h-full bg-white"></iframe>
+
+              <div className="flex">
+                <input type="text"
+                  onChange={(e) => setIframeUrl(e.target.value)}
+                  value={iframeUrl}
+                  className="w-full p-2 bg-gray-900 text-white outline-none rounded-lg"
+                />
+                <iframe key={reloadKey} src={iframeUrl} className="w-full h-full bg-white"></iframe>
+
+              </div>
             )}
           </div>
           {/* )} */}

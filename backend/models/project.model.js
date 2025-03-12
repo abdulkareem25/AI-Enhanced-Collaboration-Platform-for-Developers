@@ -6,7 +6,7 @@ const projectSchema = new mongoose.Schema({
         lowercase: true,
         required: true,
         trim: true,
-        unique: true
+        unique: [true, 'Project name already exists']
     },
 
     admin: {  // Admin field added
@@ -20,7 +20,14 @@ const projectSchema = new mongoose.Schema({
             type: mongoose.Schema.Types.ObjectId,
             ref: 'user'
         }
-    ]
+    ],
+    
+    fileTree: {
+        type: Object,
+        default: {}
+    }
+
+    
 });
 
 const Project = mongoose.model('project', projectSchema);
