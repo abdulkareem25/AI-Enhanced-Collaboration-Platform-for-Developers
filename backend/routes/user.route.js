@@ -1,30 +1,35 @@
-import { Router } from "express";
+import express from "express";
 import * as userController from '../controllers/user.controller.js';
 import { body } from "express-validator";
-import * as authMiddleware from '../middleware/auth.middleware.js';
+import { authUser } from "../middleware/auth.middleware.js";  // ✅ Sirf ek dafa import
 
-const router = Router();
+const router = express.Router();
 
-
-
+// 🟢 Register User Route
 router.post('/register',
     body('name').notEmpty().withMessage('Name is required'),
-    body('email').isEmail().withMessage('Email must be valid email address'),
-    body('password').isLength({ min: 3 }).withMessage('Password must be atleast 3 characters long'),
-    userController.createUserController);
+    body('email').isEmail().withMessage('Email must be a valid email address'),
+    body('password').isLength({ min: 3 }).withMessage('Password must be at least 3 characters long'),
+    userController.createUserController
+);
 
+// 🟢 Login User Route
 router.post('/login',
-    body('email').isEmail().withMessage('Enter valid email address'),
-    body('password').isLength({ min: 3 }).withMessage('Enter valid password'),
-    userController.loginController);
+    body('email').isEmail().withMessage('Enter a valid email address'),
+    body('password').isLength({ min: 3 }).withMessage('Enter a valid password'),
+    userController.loginController
+);
 
-router.get('/profile', authMiddleware.authUser,
-    userController.profileController);
+// 🟢 User Profile Route (Protected)
+router.get('/profile', authUser, userController.profileController);
 
-router.get('/logout', authMiddleware.authUser,
-    userController.logoutController);
+// 🟢 Logout Route (Protected)
+router.get('/logout', authUser, userController.logoutController);
 
-router.get('/all', authMiddleware.authUser,
-    userController.getAllUsersController);
+// 🟢 Get All Users (Protected)
+router.get('/all', authUser, userController.getAllUsersController);
+
+// 🟢 Get Current User (`/me` Route) (Protected)
+router.get('/me', authUser, userController.meController);
 
 export default router;

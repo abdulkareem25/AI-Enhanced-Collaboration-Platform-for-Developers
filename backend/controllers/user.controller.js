@@ -35,6 +35,7 @@ export const loginController = async (req, res) => {
     try {
 
         const { email, password } = req.body;
+        console.log("Login Attempt:", email);  
 
         const user = await userModel.findOne({ email }).select('+password');
 
@@ -116,4 +117,19 @@ export const getAllUsersController = async (req, res) => {
 
         res.status(400).json({ error: err.message })
     }
+}
+
+export const meController = async (req, res) => {
+    try {
+        const loggedInUser = await userModel.findOne({
+            email: req.user.email
+        }).select("name email") // ✅ Select only name and email    
+        return res.status(200).json({
+            user: loggedInUser
+        })  
+    }
+    catch (err) {
+        console.log(err)
+        res.status(400).json({ error: err.message })
+    }   
 }
