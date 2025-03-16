@@ -22,6 +22,10 @@ app.use((req, res, next) => {
     next();
 });
 
+// ✅ Serve React Frontend
+const __dirname = path.resolve();
+app.use(express.static(path.join(__dirname, 'dist')));
+
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
