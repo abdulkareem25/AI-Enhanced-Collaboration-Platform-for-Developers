@@ -15,7 +15,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: '*',
+        origin: '*', // Render ke liye allow kar diya
         methods: ["GET", "POST"]
     }
 });
