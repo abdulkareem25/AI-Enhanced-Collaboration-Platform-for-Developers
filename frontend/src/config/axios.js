@@ -15,4 +15,8 @@ axiosInstance.interceptors.request.use((config) => {
     return Promise.reject(error);
 });
 
+axios.get('/api/users')
+    .then(response => console.log(response.data))
+    .catch(error => console.error("API error:", error));
+    
 export default axiosInstance;

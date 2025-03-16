@@ -13,15 +13,15 @@ connect();
 const app = express();
 
 // ✅ Headers Middleware SABSE PEHLE
-app.use((req, res, next) => {
-    res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
-    res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
-    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin"); // Optional
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    next();
-});
+// app.use((req, res, next) => {
+//     res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+//     res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+//     res.setHeader("Cross-Origin-Resource-Policy", "cross-origin"); // Optional
+//     res.setHeader("Access-Control-Allow-Origin", "*");
+//     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+//     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+//     next();
+// });
 
 // ✅ Serve React Frontend
 const __dirname = path.resolve();

@@ -9,11 +9,13 @@ export default defineConfig({
     tailwindcss()
   ],
   server: {
-    headers: {
-      "Cross-Origin-Opener-Policy": "same-origin",
-      "Cross-Origin-Embedder-Policy": "require-corp"
-    },
-    cors: true
+    proxy: {
+      '/api': {
+        target: 'https://backend-pag4.onrender.com',  // Backend ka Render URL yahan dalain
+        changeOrigin: true,
+        secure: false
+      }
+    }
   },
   build: {
     target: "esnext"
