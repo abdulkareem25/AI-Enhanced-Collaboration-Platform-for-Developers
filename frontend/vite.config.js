@@ -8,6 +8,9 @@ export default defineConfig({
     react(),
     tailwindcss()
   ],
+  build: {
+    chunkSizeWarningLimit: 1000, 
+  },
   server: {
     headers: {
       "Cross-Origin-Embedder-Policy": "require-corp",
