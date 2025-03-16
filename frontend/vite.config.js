@@ -9,15 +9,9 @@ export default defineConfig({
     tailwindcss()
   ],
   server: {
-    proxy: {
-      '/api': {
-        target: 'https://backend-pag4.onrender.com',  // Backend ka Render URL yahan dalain
-        changeOrigin: true,
-        secure: false
-      }
+    headers: {
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Opener-Policy": "same-origin"
     }
-  },
-  build: {
-    target: "esnext"
   }
 })
