@@ -1,5 +1,6 @@
 import express from 'express';
 import morgan from 'morgan';
+import path from 'path'; 
 import connect from './db/db.js';
 import userRoutes from './routes/user.route.js';
 import projectRoutes from './routes/project.route.js';
