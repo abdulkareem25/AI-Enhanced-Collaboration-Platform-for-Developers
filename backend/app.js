@@ -21,9 +21,17 @@ app.use('/users', userRoutes);
 app.use('/projects', projectRoutes)
 app.use('/ai', aiRoutes)
 
+app.use((req, res, next) => {
+    res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+    res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin"); // Optional
+    next();
+});
 
 app.get('/', (req, res) => {
     res.send('Hello World!');
 });
+
+
 
 export default app;
