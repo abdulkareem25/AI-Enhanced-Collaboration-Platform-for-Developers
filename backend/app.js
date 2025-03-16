@@ -26,6 +26,7 @@ app.use((req, res, next) => {
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   next();
 });
+app.use(express.static('public'));
 
 // ✅ OPTIONS request ko handle karna zaroori hai (CORS preflight issues prevent karega)
 app.options('*', cors());
