@@ -23,9 +23,9 @@ const Project = () => {
   const [message, setMessage] = useState('')
   const [users, setUsers] = useState([])
   const [messages, setMessages] = useState([])
+
   const [fileTree, setFileTree] = useState({})
   const [currentFile, setCurrentFile] = useState(null)
-
   const [openFiles, setOpenFiles] = useState([])
   const [openFolders, setOpenFolders] = useState([])
 
@@ -36,14 +36,22 @@ const Project = () => {
   const [iframeUrl, setIframeUrl] = useState(null)
   const [runProcess, setRunProcess] = useState(null);
 
+  const [newFileName, setNewFileName] = useState("");
+  const [newFolderName, setNewFolderName] = useState("");
+  const [isCreatingFile, setIsCreatingFile] = useState(false);
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+
+  const [isPreviewPanelOpen, setIsPreviewPanelOpen] = useState(false);
+
   const messageBoxRef = React.useRef(null)
 
   const renderFileTree = (tree = {}, path = "") => {
     return Object.keys(tree).map((file) => {
       const currentPath = path ? `${path}/${file}` : file;
+
       if (typeof tree[file] === "object" && !tree[file].file) {
         return (
-          <div key={currentPath} className="folder p-2">
+          <div key={currentPath} className="folder">
             <button
               onClick={() =>
                 setOpenFolders((prev) =>
@@ -52,12 +60,18 @@ const Project = () => {
                     : [...prev, currentPath]
                 )
               }
-              className="folder-name font-semibold text-lg cursor-pointer hover:bg-gray-700 w-full p-2"
+              className="folder-name text-lg flex cursor-pointer gap-2 hover:bg-gray-700 w-full p-2"
             >
-              <i className="ri-folder-fill text-yellow-500"></i> {file}
+              <i className="ri-folder-fill text-yellow-500"></i>
+              <p
+                className="font-semibold text-lg truncate w-full flex overflow-hidden whitespace-nowrap"
+                title={file}
+              >
+                {file}
+              </p>
             </button>
             {openFolders.includes(currentPath) && (
-              <div className="pl-4">{renderFileTree(tree[file], currentPath)}</div>
+              <div className>{renderFileTree(tree[file], currentPath)}</div>
             )}
           </div>
         );
@@ -66,15 +80,43 @@ const Project = () => {
           <button
             key={currentPath}
             onClick={() => {
-              if (!tree[file]?.file) return;
               setCurrentFile(currentPath);
-              setOpenFiles([...new Set([...openFiles, currentPath])]);
+              setOpenFiles((prev) => [...new Set([...prev, currentPath])]);
+
+              // Ensure new files have valid structure
+              setFileTree((prevFileTree) => {
+                const newTree = JSON.parse(JSON.stringify(prevFileTree));
+                const parts = currentPath.split("/");
+                let current = newTree;
+
+                for (let i = 0; i < parts.length - 1; i++) {
+                  if (!current[parts[i]] || typeof current[parts[i]] !== "object") {
+                    current[parts[i]] = {}; // ✅ Ensure parent folder exists
+                  }
+                  current = current[parts[i]];
+                }
+
+                // ✅ Ensure file exists
+                if (!current[parts[parts.length - 1]]) {
+                  current[parts[parts.length - 1]] = { file: { contents: "" } };
+                }
+
+                return newTree;
+              });
             }}
-            className="tree-element cursor-pointer p-2 flex items-center gap-2 hover:bg-gray-700 w-full"
+            className="tree-element cursor-pointer p-2 flex items-center content-start gap-2 hover:bg-gray-700 w-full"
           >
-            <i className="ri-file-code-line text-blue-500"></i>
-            <p className="font-semibold text-lg">{file}</p>
+            <i className="ri-file-line text-blue-500"></i>
+
+            {/* ✅ File Name with Ellipsis & Tooltip */}
+            <p
+              className="font-semibold text-lg truncate flex w-full overflow-hidden whitespace-nowrap"
+              title={file} // ✅ Hover par pura naam dikhane ke liye
+            >
+              {file}
+            </p>
           </button>
+
         );
       }
     });
@@ -91,7 +133,7 @@ const Project = () => {
       current = current[parts[i]];
     }
 
-    return current?.file?.contents || "";
+    return current?.file?.contents ?? ""; // Ensure empty files are also handled
   };
 
   const autoSave = debounce((updatedFileTree) => {
@@ -104,6 +146,51 @@ const Project = () => {
       console.log("Error in auto-save:", err);
     });
   }, 1000);
+
+  const handleCreateFile = () => {
+    if (!newFileName.trim()) return; // Empty filename allow nahi hoga
+
+    setFileTree((prevFileTree) => {
+      const newTree = structuredClone(prevFileTree || {}); // ✅ Ensure tree is not undefined
+
+      // ✅ Agar file already exist nahi karti, toh new file create karo
+      if (!newTree[newFileName]) {
+        newTree[newFileName] = { file: { contents: "" } }; // ✅ Empty file with content
+      }
+
+      return newTree;
+    });
+
+    setNewFileName("");
+    setIsCreatingFile(false);
+    setCurrentFile(newFileName);
+    setOpenFiles((prevOpenFiles) => [...new Set([...prevOpenFiles, newFileName])]);
+  };
+
+
+  const handleCreateFolder = () => {
+    if (!newFolderName.trim()) return;
+
+    setFileTree((prevFileTree) => {
+      const newTree = structuredClone(prevFileTree);
+      const parts = newFolderName.split("/");
+      let current = newTree;
+
+      // ✅ Ensure all parent folders exist
+      for (let i = 0; i < parts.length; i++) {
+        if (!current[parts[i]] || typeof current[parts[i]] !== "object") {
+          current[parts[i]] = {}; // Creates folder if missing
+        }
+        current = current[parts[i]];
+      }
+
+      return newTree;
+    });
+
+    setNewFolderName("");
+    setIsCreatingFolder(false);
+    setOpenFolders((prevOpenFolders) => [...new Set([...prevOpenFolders, newFolderName])]);
+  };
 
 
   const handleUserClick = (id) => {
@@ -141,7 +228,6 @@ const Project = () => {
         console.log(err);
       });
   }
-
 
 
   function getColorForSender(sender) {
@@ -182,11 +268,7 @@ const Project = () => {
     )
   }
 
-
-
-
   useEffect(() => {
-
     initializeSocket(project._id)
 
     if (!webContainer) {
@@ -228,7 +310,6 @@ const Project = () => {
         setFileTree(res.data.project.fileTree)
       })
 
-    
     axios.get('/users/all')
       .then(res => {
         setUsers(res.data.users)
@@ -252,11 +333,8 @@ const Project = () => {
     }
   }, [isModalOpen]);
 
-
-
   useEffect(() => {
-    if (!webContainer || !isInstalled) return; 
-  
+    if (!webContainer || !isInstalled) return;
     async function updateFiles() {
       try {
         await webContainer.mount(fileTree); // Sirf updated files mount karo
@@ -265,32 +343,20 @@ const Project = () => {
         console.error("Error updating files:", error);
       }
     }
-  
     updateFiles();
   }, [fileTree]); // Server restart nahi hoga, sirf file update hogi
-  
-
-
-
 
   return (
     <main className='h-screen w-screen flex bg-gray-950 text-white '>
       <section className='left relative h-full flex flex-col max-w-70 bg-gray-800'>
         <div className="chats h-full flex flex-col">
           <header className='relative rounded-b flex items-center justify-between w-full bg-gray-950 p-3 px-4 h-12'>
-            <div className="relative group w-full">
-              <h2 className="text-white text-lg font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[300px] cursor-pointer">
+            <div className=" w-full">
+              <h2 className="text-white text-lg font-semibold whitespace-nowrap overflow-hidden max-w-[300px] cursor-pointer"
+                title={project.name}>
                 {project.name}
               </h2>
-
-              {/* Tooltip - Ab ye poora header jitna wide hoga */}
-              <span className="absolute left-0 top-full mt-1 opacity-0 group-hover:opacity-100 
-           bg-black text-white text-sm px-3 py-1 rounded-md shadow-lg w-full 
-           text-center whitespace-normal break-words z-50 transition-opacity duration-200">
-                {project.name}
-              </span>
             </div>
-
             <button
               onClick={() => setIsSidePanelOpen(!isSidePanelOpen)}
               className='cursor-pointer text-blue-500 text-xl'>
@@ -363,7 +429,7 @@ const Project = () => {
           </header>
 
           <div className="users flex flex-col gap-2 ">
-          {project.users?.filter(user => user?._id).map(user => (
+            {project.users?.filter(user => user?._id).map(user => (
               <div
                 key={user._id}
                 className='user flex gap-2 items-center bg-gray-900 rounded-lg mx-1 hover:bg-gray-700 cursor-pointer'
@@ -384,33 +450,68 @@ const Project = () => {
         </div>
       </section>
 
-      <section className="right flex flex-grow h-full">
+      <section className="right flex flex-grow h-full overflow-hidden">
         <div className="explorer bg-gray-900 h-full w-48 flex flex-col border-r border-gray-700">
           <div className="flex items-center justify-around border-b border-gray-700 h-12">
             <div>EXPLORER</div>
-            <div className="text-blue-500 text-xl cursor-pointer">
-              <button><i className="ri-folder-add-line"></i></button>
-              <button><i className="ri-file-add-line"></i></button>
+            <div className="text-blue-500 text-xl cursor-pointer flex gap-2">
+              <button onClick={() => setIsCreatingFile(true)} className="hover:text-blue-300">
+                <i className="ri-file-add-line"></i>
+              </button>
+              <button onClick={() => setIsCreatingFolder(true)} className="hover:text-blue-300">
+                <i className="ri-folder-add-line"></i>
+              </button>
             </div>
           </div>
-          <div className="file-tree w-full p-2">{renderFileTree(fileTree)}</div>
+          <div className="file-tree w-full">
+            {/* Input for New File Name */}
+            {isCreatingFile && (
+              <input
+                type="text"
+                value={newFileName}
+                onChange={(e) => setNewFileName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreateFile()}
+                onBlur={() => setIsCreatingFile(false)}
+                className="border p-2 rounded w-44 m-2 outline-none"
+                placeholder="Enter file name..."
+                autoFocus
+              />
+            )}
+
+            {/* Input for New Folder Name */}
+            {isCreatingFolder && (
+              <input
+                type="text"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreateFolder()}
+                onBlur={() => setIsCreatingFolder(false)}
+                className="border p-2 rounded w-44 m-2 outline-none"
+                placeholder="Enter folder name..."
+                autoFocus
+              />
+            )}
+
+            {/* File Tree Rendering */}
+            <div className="">{renderFileTree(fileTree)}</div>
+          </div>
         </div>
 
         <div className="editor flex-grow h-full w-0 relative">
 
 
           {/* {currentFile && ( */}
-          <div className="code-editor flex flex-col h-full bg-gray-950 w-full">
+          <div className="code-editor flex flex-col h-full bg-gray-800 w-full">
 
 
             {/* Tabs Section */}
-            <div className="top h-12 px-1 flex justify-between w-full bg-gray-900 border-b border-gray-700">
+            <div className="top h-12 min-h-12 pr-1 flex justify-between w-full bg-gray-900 border-b border-gray-700">
               <div className="tab flex flex-row overflow-y-auto">
                 {openFiles.map((file) => (
-                  <div key={file} className="header flex items-center hover:bg-gray-800 border-r border-gray-700 whitespace-nowrap">
+                  <div key={file} className="header flex items-center hover:bg-gray-800 border-r border-gray-700 whitespace-nowrap px-2 gap-2">
                     <button
                       onClick={() => setCurrentFile(file)}
-                      className="p-2 text-white"
+                      className=" text-white"
                     >
                       <p className="font-semibold text-lg">{file}</p>
                     </button>
@@ -422,7 +523,7 @@ const Project = () => {
                           setCurrentFile(updatedFiles.length > 0 ? updatedFiles[0] : null);
                         }
                       }}
-                      className="text-xl cursor-pointer pr-2 text-blue-500"
+                      className="text-xl cursor-pointer  text-blue-500"
                     >
                       <i className="ri-close-line"></i>
                     </button>
@@ -448,53 +549,66 @@ const Project = () => {
                     await installProcess.exit;
                     setIsInstalling(false);
                     setIsInstalled(true);
-                  }}
+                    setIsPreviewPanelOpen(!isPreviewPanelOpen); // Open preview panel after autoSave
+                    }}
 
-                  className="text-xl text-blue-500 px-4 cursor-pointer bg-gray-950 rounded-lg hover:bg-gray-700"
-                >
-                  {isInstalling ? "Installing..." : "Install"}
-                </button>
-
-
-                <button
+                    className="text-xl text-blue-500 px-4 cursor-pointer bg-gray-950 rounded-lg hover:bg-gray-700"
+                  >
+                    {isInstalling ? "Installing..." : "Install"}
+                  </button>
+                  
+                  
+                  <button
                   onClick={async () => {
                     if (runProcess) {
-                        await runProcess.kill();
+                      await runProcess.kill();
                     }
-                
+
                     await webContainer.mount(fileTree); // Mount before running
-                
+
                     const process = await webContainer.spawn("npm", ["start"]);
                     setRunProcess(process);
-                
+                    
+
                     process.output.pipeTo(new WritableStream({
-                        write(chunk) {
-                            console.log(chunk);
-                        }
+                      write(chunk) {
+                      console.log(chunk);
+                      }
                     }));
-                
+                    
+
                     webContainer.on("server-ready", (port, url) => {
-                        console.log("Server running on:", url);
-                        setIframeUrl(url);
-                        
-                        // 🔹 Server run hone ke baad hi save karna
-                        autoSave(fileTree);
+                      console.log("Server running on:", url);
+                      setIframeUrl(url);
+                      
+                      // 🔹 Server run hone ke baad hi save karna
+                      autoSave(fileTree);
+
+                      // 🔹 Preview Panel ko open karna
+                      setIsPreviewPanelOpen(!isPreviewPanelOpen);
                     });
-                }}
-                                  
+                  }}
+
                   className="text-xl text-blue-500 px-4 cursor-pointer bg-gray-950 rounded-lg hover:bg-gray-700"
                 >
                   Run
                 </button>
 
+                  <button
+                    onClick={() => setIsPreviewPanelOpen(!isPreviewPanelOpen)}
+                    className='cursor-pointer text-blue-500 text-xl bg-gray-950 rounded-lg hover:bg-gray-700 mr-1'
+                    title="preview">
+                    <i className="ri-arrow-up-s-line p-2"></i>
+                  </button>
 
-              </div>
-            </div>
 
-            {/* Code Editor Section */}
+                  </div>
+                </div>
+
+                {/* Code Editor Section */}
             <div className="bottom flex w-full flex-grow overflow-y-auto">
 
-              {currentFile && getFileContent(currentFile, fileTree) ? (
+              {currentFile ? (
                 <div className="h-full w-full">
                   <CodeMirror
                     key={currentFile} // Ensures re-render on file change
@@ -505,59 +619,55 @@ const Project = () => {
                     height="100%"
                     onChange={(value) => {
                       setFileTree((prevFileTree) => {
-                          const newTree = structuredClone(prevFileTree);
-                          const parts = currentFile.split("/");
-                          let current = newTree;
-                  
-                          for (let i = 0; i < parts.length - 1; i++) {
-                              if (!current[parts[i]]) return prevFileTree;
-                              current = current[parts[i]];
-                          }
-                  
-                          if (current[parts[parts.length - 1]]?.file) {
-                              current[parts[parts.length - 1]].file.contents = value;
-                          }
-                  
-                          return newTree;
+                        const newTree = structuredClone(prevFileTree);
+                        const parts = currentFile.split("/");
+                        let current = newTree;
+
+                        for (let i = 0; i < parts.length - 1; i++) {
+                          if (!current[parts[i]]) return prevFileTree;
+                          current = current[parts[i]];
+                        }
+
+                        if (current[parts[parts.length - 1]]?.file) {
+                          current[parts[parts.length - 1]].file.contents = value;
+                        }
+
+                        return newTree;
                       });
-                  
+
                       // 🔥 Hot Reload Bina Server Restart Kiye
                       webContainer.mount(fileTree);
-                  }}
-                                     
+                    }}
+
                   />
                 </div>
               ) : (
                 <div className="h-full w-full">
-                  <CodeMirror
-                    key="empty-editor"
-                    value=""
-                    className="w-full h-full"
-                    theme={dracula}
-                    extensions={[javascript()]}
-                    height="100%"
-                    placeholder="Start writing your code here..."
-                    onChange={(value) => {
-                      console.log("Editing empty file:", value);
-                    }}
-                  />
+                  <div className="flex items-center justify-center h-full w-full text-white text-lg">
+                    Select a file to edit
+                  </div>
                 </div>
               )}
             </div>
-            {/* <button onClick={() => setReloadKey(prev => prev + 1)}>Reload</button> */}
-            {iframeUrl && webContainer && (
-
-              <div className="flex">
+          </div>
+          {/* <button onClick={() => setReloadKey(prev => prev + 1)}>Reload</button> */}
+          {iframeUrl && webContainer && (
+            <div className={`preview h-full w-full box-border max-w-full flex flex-grow flex-col items-center bg-gray-900 absolute transition-all ${isPreviewPanelOpen ? 'translate-y-0' : '-translate-y-full'}`}>
+              <div className="header h-12 min-h-12 px-1 flex justify-around w-full bg-gray-900 border-b border-gray-700">
                 <input type="text"
                   onChange={(e) => setIframeUrl(e.target.value)}
                   value={iframeUrl}
-                  className="w-full p-2 bg-gray-900 text-white outline-none rounded-lg"
+                  className="w-[94%] p-2  text-white bg-gray-700 outline-none rounded-full m-1"
                 />
-                <iframe key={reloadKey} src={iframeUrl} className="w-full h-full bg-white"></iframe>
-
+                <button
+                  onClick={() => setIsPreviewPanelOpen(!isPreviewPanelOpen)}
+                  className='cursor-pointer text-blue-500 text-xl m-1 bg-gray-950 rounded-lg hover:bg-gray-700 p-2'>
+                  <i className="ri-arrow-down-s-line text-blue-500"></i>
+                </button>
               </div>
-            )}
-          </div>
+              <iframe key={reloadKey} src={iframeUrl} className="w-full h-full bg-white"></iframe>
+            </div>
+          )}
           {/* )} */}
         </div>
       </section>
@@ -608,6 +718,5 @@ const Project = () => {
     </main>
   );
 }
-
 
 export default Project
