@@ -12,7 +12,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: 'https://ai-enhanced-collaboration-platform-for-8srm.onrender.com',
+        origin: '*',
         methods: ["GET", "POST"]
     }
 });

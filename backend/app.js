@@ -12,7 +12,7 @@ connect();
 const app = express();
 
 // ✅ Proper CORS Config for Allowed Origins
-app.use(cors({ origin: 'https://ai-enhanced-collaboration-platform-for-8srm.onrender.com', credentials: true }));
+app.use(cors({ origin: '*', credentials: true }));
 
 app.use(morgan('dev'));
 app.use(express.json());
@@ -29,7 +29,7 @@ app.use((req, res, next) => {
 app.use(express.static('public'));
 
 // ✅ OPTIONS request ko handle karna zaroori hai (CORS preflight issues prevent karega)
-app.options('https://ai-enhanced-collaboration-platform-for-8srm.onrender.com', cors());
+app.options('*', cors());
 
 app.use('/users', userRoutes);
 app.use('/projects', projectRoutes);
