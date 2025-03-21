@@ -136,6 +136,18 @@ const Project = () => {
     return current?.file?.contents ?? ""; // Ensure empty files are also handled
   };
 
+  const saveMessageToDB = async (messageData) => {
+    try {
+      await axios.post('/projects/save-message', {
+        projectId: project._id,
+        sender: messageData.sender,
+        message: messageData.message
+      });
+    } catch (err) {
+      console.error('Error saving message:', err);
+    }
+  };
+
   const autoSave = debounce((updatedFileTree) => {
     axios.put("/projects/update-file-tree", {
       projectId: location.state.project._id,
@@ -252,6 +264,7 @@ const Project = () => {
     sendMessage('project-message', outgoingMessage)
     setMessages(prevMessages => [...prevMessages, outgoingMessage])
     setMessage("")
+    saveMessageToDB(outgoingMessage);
   }
 
 
@@ -282,6 +295,9 @@ const Project = () => {
       console.log("Received Data:", data);
 
       try {
+        if (data.sender._id === 'ai') {
+          saveMessageToDB(data);
+        }
         // Directly use data.message if it's already an object
         if (data.sender._id === 'ai') {
           const message = typeof data.message === "string" ? JSON.parse(data.message) : data.message;
@@ -308,7 +324,32 @@ const Project = () => {
         console.log(res.data.project)
         setProject(res.data.project)
         setFileTree(res.data.project.fileTree)
-      })
+        // // Set existing messages from database
+        // setMessages(res.data.project.messages || []);
+
+        // Unique messages filter
+        const uniqueMessages = res.data.project.messages.reduce((acc, current) => {
+          const x = acc.find(item =>
+            item.message === current.message &&
+            item.sender._id === current.sender._id &&
+            item.createdAt === current.createdAt
+          );
+          return x ? acc : [...acc, current];
+        }, []);
+
+        setMessages(uniqueMessages);
+
+      }).catch(err => {
+        console.error("Error fetching project:", err);
+        // Handle specific error cases
+        if (err.response?.status === 400) {
+          alert("Invalid project ID format");
+        } else if (err.response?.status === 404) {
+          alert("Project not found");
+        } else {
+          alert("Error loading project");
+        }
+      });
 
     axios.get('/users/all')
       .then(res => {
@@ -550,15 +591,15 @@ const Project = () => {
                     setIsInstalling(false);
                     setIsInstalled(true);
                     setIsPreviewPanelOpen(!isPreviewPanelOpen); // Open preview panel after autoSave
-                    }}
+                  }}
 
-                    className="text-xl text-blue-500 px-4 cursor-pointer bg-gray-950 rounded-lg hover:bg-gray-700"
-                  >
-                    {isInstalling ? "Installing..." : "Install"}
-                  </button>
-                  
-                  
-                  <button
+                  className="text-xl text-blue-500 px-4 cursor-pointer bg-gray-950 rounded-lg hover:bg-gray-700"
+                >
+                  {isInstalling ? "Installing..." : "Install"}
+                </button>
+
+
+                <button
                   onClick={async () => {
                     if (runProcess) {
                       await runProcess.kill();
@@ -568,19 +609,19 @@ const Project = () => {
 
                     const process = await webContainer.spawn("npm", ["start"]);
                     setRunProcess(process);
-                    
+
 
                     process.output.pipeTo(new WritableStream({
                       write(chunk) {
-                      console.log(chunk);
+                        console.log(chunk);
                       }
                     }));
-                    
+
 
                     webContainer.on("server-ready", (port, url) => {
                       console.log("Server running on:", url);
                       setIframeUrl(url);
-                      
+
                       // 🔹 Server run hone ke baad hi save karna
                       autoSave(fileTree);
 
@@ -594,18 +635,18 @@ const Project = () => {
                   Run
                 </button>
 
-                  <button
-                    onClick={() => setIsPreviewPanelOpen(!isPreviewPanelOpen)}
-                    className='cursor-pointer text-blue-500 text-xl bg-gray-950 rounded-lg hover:bg-gray-700 mr-1'
-                    title="preview">
-                    <i className="ri-arrow-up-s-line p-2"></i>
-                  </button>
+                <button
+                  onClick={() => setIsPreviewPanelOpen(!isPreviewPanelOpen)}
+                  className='cursor-pointer text-blue-500 text-xl bg-gray-950 rounded-lg hover:bg-gray-700 mr-1'
+                  title="preview">
+                  <i className="ri-arrow-up-s-line p-2"></i>
+                </button>
 
 
-                  </div>
-                </div>
+              </div>
+            </div>
 
-                {/* Code Editor Section */}
+            {/* Code Editor Section */}
             <div className="bottom flex w-full flex-grow overflow-y-auto">
 
               {currentFile ? (

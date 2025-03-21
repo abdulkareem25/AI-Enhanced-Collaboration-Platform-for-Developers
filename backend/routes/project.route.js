@@ -36,5 +36,12 @@ router.put('/update-file-tree',
     projectController.updateFileTree
 )
 
+router.post('/save-message',
+    authMiddleWare.authUser,
+    body('projectId').isString(),
+    body('sender').isObject(),
+    body('message').isString(),
+    projectController.saveMessage
+);
 
 export default router;

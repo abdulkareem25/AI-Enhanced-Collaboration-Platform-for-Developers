@@ -2,7 +2,7 @@ import projectModel from '../models/project.model.js'
 import * as projectServices from '../services/project.service.js'
 import userModel from '../models/user.model.js'
 import { validationResult } from 'express-validator'
-
+import mongoose from 'mongoose'
 
 export const createProject = async (req, res) => {
     const errors = validationResult(req);
@@ -94,22 +94,29 @@ export const addUsersToProject = async (req, res) => {
 }
 
 export const getProjectById = async (req, res) => {
-
     const { projectId } = req.params;
 
-    try {
-        const project = await projectServices.getProjectById({
-            projectId
-        })
-        return res.status(200).json({
-            project
-        })
+    // ✅ Add validation
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+        return res.status(400).json({ error: "Invalid project ID format" });
     }
-    catch( err ) {
-        console.log(err)
-        res.status(400).json({ error: err.message })
+
+    try {
+        const project = await projectModel.findById(projectId)
+            .populate('users')
+            .lean();
+
+        if (!project) {
+            return res.status(404).json({ error: "Project not found" });
+        }
+
+        res.status(200).json({ project });
+    } catch (err) {
+        console.error("Error in getProjectById:", err);
+        res.status(500).json({ error: "Server error" });
     }
 }
+
 
 
 export const updateFileTree = async (req, res) => {
@@ -136,3 +143,28 @@ export const updateFileTree = async (req, res) => {
         res.status(400).json({ error: err.message })
     }
 }
+
+export const saveMessage = async (req, res) => {
+    try {
+        const { projectId, sender, message } = req.body;
+        
+        const project = await projectModel.findByIdAndUpdate(
+            projectId,
+            {
+                $push: {
+                    messages: {
+                        sender,
+                        message,
+                        createdAt: new Date()
+                    }
+                }
+            },
+            { new: true }
+        );
+
+        res.status(200).json(project);
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ error: err.message });
+    }
+};
