@@ -180,29 +180,29 @@ const Project = () => {
   };
 
 
-  const handleCreateFolder = () => {
-    if (!newFolderName.trim()) return;
+  // const handleCreateFolder = () => {
+  //   if (!newFolderName.trim()) return;
 
-    setFileTree((prevFileTree) => {
-      const newTree = structuredClone(prevFileTree);
-      const parts = newFolderName.split("/");
-      let current = newTree;
+  //   setFileTree((prevFileTree) => {
+  //     const newTree = structuredClone(prevFileTree);
+  //     const parts = newFolderName.split("/");
+  //     let current = newTree;
 
-      // ✅ Ensure all parent folders exist
-      for (let i = 0; i < parts.length; i++) {
-        if (!current[parts[i]] || typeof current[parts[i]] !== "object") {
-          current[parts[i]] = {}; // Creates folder if missing
-        }
-        current = current[parts[i]];
-      }
+  //     // ✅ Ensure all parent folders exist
+  //     for (let i = 0; i < parts.length; i++) {
+  //       if (!current[parts[i]] || typeof current[parts[i]] !== "object") {
+  //         current[parts[i]] = {}; // Creates folder if missing
+  //       }
+  //       current = current[parts[i]];
+  //     }
 
-      return newTree;
-    });
+  //     return newTree;
+  //   });
 
-    setNewFolderName("");
-    setIsCreatingFolder(false);
-    setOpenFolders((prevOpenFolders) => [...new Set([...prevOpenFolders, newFolderName])]);
-  };
+  //   setNewFolderName("");
+  //   setIsCreatingFolder(false);
+  //   setOpenFolders((prevOpenFolders) => [...new Set([...prevOpenFolders, newFolderName])]);
+  // };
 
 
   const handleUserClick = (id) => {
@@ -268,18 +268,22 @@ const Project = () => {
   }
 
 
-  function writeAiMessage(message) {
-
-    const messageObject = JSON.parse(message)
-
-    return (
-      <div className='ai-reply bg-gray-950 rounded p-0.5 overflow-auto'>
-        <Markdown
-          children={messageObject.text}
-        />
-      </div>
-    )
+const writeAiMessage = (message) => {
+  let content;
+  try {
+    const parsed = typeof message === 'string' ? JSON.parse(message) : message;
+    content = parsed.text || parsed;
+  } catch {
+    content = message;
   }
+
+  return (
+    <div className='ai-reply bg-gray-950 rounded p-0.5 overflow-auto'>
+      <Markdown>{'```plaintext\n' + content + '\n```'}</Markdown>
+    </div>
+  );
+};
+
 
   useEffect(() => {
     initializeSocket(project._id)
@@ -295,61 +299,38 @@ const Project = () => {
       console.log("Received Data:", data);
 
       try {
+        // Save all messages but only process non-AI messages
         if (data.sender._id === 'ai') {
           saveMessageToDB(data);
-        }
-        // Directly use data.message if it's already an object
-        if (data.sender._id === 'ai') {
-          const message = typeof data.message === "string" ? JSON.parse(data.message) : data.message;
-          console.log("Parsed Message:", message);
-
-          webContainer?.mount(message.fileTree)
-
-          if (message.fileTree) {
-            console.log("File Tree:", message.fileTree);
-            setFileTree(message.fileTree);
-          }
-          setMessages(prevMessages => [...prevMessages, data]);
-
+          setMessages(prev => [...prev, data]);
         } else {
-          setMessages(prevMessages => [...prevMessages, data]);
+          // Handle normal user messages
+          setMessages(prev => [...prev, data]);
         }
       } catch (error) {
-        console.error("Error parsing message:", error);
+        console.error("Error handling message:", error);
       }
     });
 
     axios.get(`/projects/get-project/${location.state.project._id}`)
       .then(res => {
-        console.log(res.data.project)
-        setProject(res.data.project)
-        setFileTree(res.data.project.fileTree)
-        // // Set existing messages from database
-        // setMessages(res.data.project.messages || []);
+        const projectData = res.data.project;
+        setProject(projectData);
+        setFileTree(projectData.fileTree || {});
 
-        // Unique messages filter
-        const uniqueMessages = res.data.project.messages.reduce((acc, current) => {
-          const x = acc.find(item =>
+        // Handle messages with null check
+        const messages = projectData.messages || [];
+        const uniqueMessages = messages.reduce((acc, current) => {
+          const exists = acc.some(item =>
             item.message === current.message &&
             item.sender._id === current.sender._id &&
             item.createdAt === current.createdAt
           );
-          return x ? acc : [...acc, current];
+          return exists ? acc : [...acc, current];
         }, []);
 
         setMessages(uniqueMessages);
-
-      }).catch(err => {
-        console.error("Error fetching project:", err);
-        // Handle specific error cases
-        if (err.response?.status === 400) {
-          alert("Invalid project ID format");
-        } else if (err.response?.status === 404) {
-          alert("Project not found");
-        } else {
-          alert("Error loading project");
-        }
-      });
+      })
 
     axios.get('/users/all')
       .then(res => {
@@ -410,25 +391,36 @@ const Project = () => {
               className='message-box flex-grow flex flex-col gap-2 overflow-y-auto'
             >
               {messages.map((msg, index) => {
-                const isOutgoing = msg.sender._id === user._id
-                return (
-                  <div
-                    key={index}
-                    className={`message flex flex-col rounded-lg p-2 ${msg.sender._id === 'ai' ? 'max-w-full' : 'max-w-60'} bg-gray-700 text-white ${isOutgoing ? 'ml-auto' : 'self-start'}`}
-                  >
-                    {!isOutgoing && (
-                      <small className='text-xs' style={{ color: getColorForSender(msg.sender.name) }}>
-                        {msg.sender.name}
-                      </small>
-                    )}
-                    <div className='text-sm'>
-                      {msg.sender._id === 'ai' ?
-                        writeAiMessage(msg.message)
-                        : <div className='max-w-60 overflow-clip'>{msg.message}</div>}
-                    </div>
-                  </div>
-                )
-              })}
+  const isOutgoing = msg.sender._id === user._id;
+  const isAI = msg.sender._id === 'ai';
+
+  return (
+    <div
+      key={index}
+      className={`message flex flex-col rounded-lg p-2 ${
+        isAI ? 'max-w-full' : 'max-w-60'
+      } bg-gray-700 text-white ${
+        isOutgoing ? 'ml-auto' : 'self-start'
+      }`}
+    >
+      {!isOutgoing && (
+        <small
+          className='text-xs'
+          style={{ color: getColorForSender(msg.sender.name) }}
+        >
+          {msg.sender.name}
+        </small>
+      )}
+      <div className='text-sm'>
+        {isAI ? (
+          writeAiMessage(msg.message)
+        ) : (
+          <div className='max-w-60 overflow-clip'>{msg.message}</div>
+        )}
+      </div>
+    </div>
+  );
+})}
             </div>
           </div>
 
@@ -499,9 +491,9 @@ const Project = () => {
               <button onClick={() => setIsCreatingFile(true)} className="hover:text-blue-300">
                 <i className="ri-file-add-line"></i>
               </button>
-              <button onClick={() => setIsCreatingFolder(true)} className="hover:text-blue-300">
+              {/* <button onClick={() => setIsCreatingFolder(true)} className="hover:text-blue-300">
                 <i className="ri-folder-add-line"></i>
-              </button>
+              </button> */}
             </div>
           </div>
           <div className="file-tree w-full">
@@ -520,7 +512,7 @@ const Project = () => {
             )}
 
             {/* Input for New Folder Name */}
-            {isCreatingFolder && (
+            {/* {isCreatingFolder && (
               <input
                 type="text"
                 value={newFolderName}
@@ -531,7 +523,7 @@ const Project = () => {
                 placeholder="Enter folder name..."
                 autoFocus
               />
-            )}
+            )} */}
 
             {/* File Tree Rendering */}
             <div className="">{renderFileTree(fileTree)}</div>
