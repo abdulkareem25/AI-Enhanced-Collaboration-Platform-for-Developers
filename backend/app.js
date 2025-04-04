@@ -26,6 +26,13 @@ app.use((req, res, next) => {
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   next();
 });
+app.use((req, res, next) => {
+    if (req.url === '/favicon.ico') {
+      res.status(204).end();
+      return;
+    }
+    next();
+  });
 app.use(express.static('public'));
 
 // ✅ OPTIONS request ko handle karna zaroori hai (CORS preflight issues prevent karega)
