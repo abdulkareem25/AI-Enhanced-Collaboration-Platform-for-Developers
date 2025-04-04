@@ -268,21 +268,32 @@ const Project = () => {
   }
 
 
-const writeAiMessage = (message) => {
-  let content;
-  try {
-    const parsed = typeof message === 'string' ? JSON.parse(message) : message;
-    content = parsed.text || parsed;
-  } catch {
-    content = message;
-  }
-
-  return (
-    <div className='ai-reply bg-gray-950 rounded p-0.5 overflow-auto'>
-      <Markdown>{'```plaintext\n' + content + '\n```'}</Markdown>
-    </div>
-  );
-};
+  const writeAiMessage = (message) => {
+    let content;
+    try {
+      const parsed = typeof message === 'string' ? JSON.parse(message) : message;
+      content = typeof parsed.text === 'object' 
+        ? JSON.stringify(parsed.text, null, 2)
+        : parsed.text || parsed;
+    } catch {
+      content = typeof message === 'object' 
+        ? JSON.stringify(message, null, 2) 
+        : message;
+    }
+  
+    // Check for structured content patterns
+    const isStructured = /(\n|{|}|\[|\]|`|\\|\/)/.test(content);
+  
+    return (
+      <div className={`ai-reply bg-gray-950 rounded p-2 ${
+        isStructured ? 'overflow-auto' : 'overflow-visible'
+      }`}>
+        <Markdown>
+          {isStructured ? `\`\`\`\n${content}\n\`\`\`` : content}
+        </Markdown>
+      </div>
+    );
+  };
 
 
   useEffect(() => {
